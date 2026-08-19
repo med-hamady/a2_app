@@ -127,7 +127,7 @@ class BlockingScreen extends ConsumerWidget {
   static IconData _iconFor(String category) => switch (category.toLowerCase()) {
         'réseaux sociaux' => Icons.share_outlined,
         'streaming' => Icons.movie_outlined,
-        'jeux' => Icons.sports_esports_outlined,
+        'contrôle parental' => Icons.eighteen_up_rating_outlined,
         _ => Icons.apps,
       };
 
@@ -247,19 +247,14 @@ Color _platformColor(String key) => switch (key) {
       'snapchat' => const Color(0xFFFFC800),
       'youtube' => const Color(0xFFFF0000),
       'netflix' => const Color(0xFFE50914),
-      'roblox' => Colors.black,
-      'freefire' => const Color(0xFFFF6B00),
+      'adult_content' => const Color(0xFFB33A3A),
       _ => AppColors.brand,
     };
 
 /// Vrais logos de marque (SVG officiels, source Simple Icons — CC0, redessin
 /// libre de droits des marques déposées, usage standard pour ce genre
 /// d'écran « autoriser / bloquer telle app »). `assets/icons/platforms/`.
-///
-/// Free Fire n'a pas d'équivalent dans un jeu d'icônes libre de droits : pas
-/// de logo officiel disponible sans risque de licence, d'où l'icône
-/// générique en repli — un choix assumé, pas un oubli.
-const _svgLogos = {'tiktok', 'facebook', 'instagram', 'snapchat', 'youtube', 'netflix', 'roblox'};
+const _svgLogos = {'tiktok', 'facebook', 'instagram', 'snapchat', 'youtube', 'netflix'};
 
 Widget _platformLogo(String key) {
   if (_svgLogos.contains(key)) {
@@ -270,7 +265,7 @@ Widget _platformLogo(String key) {
       colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
     );
   }
-  final icon = key == 'freefire' ? Icons.local_fire_department : Icons.public;
+  final icon = key == 'adult_content' ? Icons.eighteen_up_rating : Icons.public;
   return Icon(icon, size: 24, color: Colors.white);
 }
 

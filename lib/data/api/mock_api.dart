@@ -407,18 +407,16 @@ class MockA2Api implements A2Api {
           subtitle: 'Bloquer netflix.com',
           state: BlockState.allowed,
         ),
+        // Pas un site précis mais une catégorie : la détection s'appuie sur le
+        // mécanisme de filtrage déjà en place côté A2 Connect, pas sur une
+        // liste de domaines tenue par l'app. Le blocage effectif sera branché
+        // avec le reste de l'API — cette entrée n'est, pour l'instant, que le
+        // choix proposé à l'abonné.
         const BlockablePlatform(
-          key: 'roblox',
-          label: 'Roblox',
-          category: 'Jeux',
-          subtitle: 'Bloquer roblox.com',
-          state: BlockState.blocked,
-        ),
-        const BlockablePlatform(
-          key: 'freefire',
-          label: 'Free Fire',
-          category: 'Jeux',
-          subtitle: 'Bloquer ff.garena.com',
+          key: 'adult_content',
+          label: 'Contenu pour adultes (+18)',
+          category: 'Contrôle parental',
+          subtitle: 'Bloquer les sites détectés comme réservés aux adultes.',
           state: BlockState.allowed,
         ),
       ];
