@@ -25,4 +25,9 @@ abstract final class AppDurations {
   /// Latence simulée par l'API mockée — assez longue pour qu'on VOIE les
   /// écrans de chargement pendant le développement.
   static const mockLatency = Duration(milliseconds: 700);
+
+  /// Durée minimale de présentation du splash : le temps que l'animation du
+  /// logo se joue en entier, même si la session est résolue plus vite (cache
+  /// local quasi instantané). Le routeur ne quitte jamais le splash avant.
+  static const splashMinDisplay = Duration(milliseconds: 1900);
 }

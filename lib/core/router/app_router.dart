@@ -46,17 +46,24 @@ final routerProvider = Provider<GoRouter>((ref) {
     /// être connecté, ni revenir à la connexion en l'étant.
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
+      final minDisplayDone = ref.read(splashMinDurationProvider).hasValue;
       final path = state.matchedLocation;
 
-      if (session.isLoading) {
+      // Le splash reste affiché tant que la session n'est pas connue OU que
+      // l'animation du logo n'a pas eu le temps de se jouer en entier.
+      if (session.isLoading || !minDisplayDone) {
         return path == Routes.splash ? null : Routes.splash;
       }
 
       final loggedIn = session.value != null;
-      final onAuthFlow = path == Routes.splash ||
-          path == Routes.welcome ||
-          path == Routes.login;
 
+      // La session est connue : le splash n'est jamais une destination
+      // valable, on le quitte immédiatement vers l'écran qui correspond.
+      if (path == Routes.splash) {
+        return loggedIn ? Routes.home : Routes.welcome;
+      }
+
+      final onAuthFlow = path == Routes.welcome || path == Routes.login;
       if (!loggedIn) return onAuthFlow ? null : Routes.welcome;
       if (onAuthFlow) return Routes.home;
       return null;
@@ -145,5 +152,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 class _SessionListenable extends ChangeNotifier {
   _SessionListenable(Ref ref) {
     ref.listen(sessionProvider, (_, __) => notifyListeners());
+    ref.listen(splashMinDurationProvider, (_, __) => notifyListeners());
   }
 }
