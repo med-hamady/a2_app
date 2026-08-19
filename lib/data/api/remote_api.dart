@@ -94,6 +94,7 @@ class RemoteA2Api implements A2Api {
     if (code >= 200 && code < 300) return res;
 
     final message = _messageFrom(res.data);
+    if (code == 401 || code == 403) onUnauthorized?.call();
     throw switch (code) {
       401 || 403 => ApiException(
           message ?? 'Votre session a expiré. Reconnectez-vous.',

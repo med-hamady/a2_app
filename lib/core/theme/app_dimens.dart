@@ -6,7 +6,7 @@
 abstract final class AppRadius {
   static const card = 20.0;
   static const button = 14.0;
-  static const field = 12.0;
+  static const field = 18.0;
   static const pill = 999.0;
 }
 

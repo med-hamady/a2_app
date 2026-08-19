@@ -27,7 +27,13 @@ abstract final class Routes {
   static const notifications = '/notifications';
 
   static String invoice(String id) => '$invoices/$id';
-  static String payment(String id) => '$payments/$id';
+
+  /// [fromNotification] : présent quand on arrive depuis la notification liée
+  /// — l'écran de détail propose alors de la supprimer (écran 08).
+  static String payment(String id, {String? fromNotification}) =>
+      fromNotification == null
+          ? '$payments/$id'
+          : '$payments/$id?depuis_notification=$fromNotification';
 
   /// Écran de règlement. Sans facture, c'est un paiement libre.
   static String pay({String? invoiceId}) =>
@@ -129,8 +135,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 GoRoute(
                   path: ':id',
-                  builder: (_, state) =>
-                      PaymentDetailScreen(paymentId: state.pathParameters['id']!),
+                  builder: (_, state) => PaymentDetailScreen(
+                    paymentId: state.pathParameters['id']!,
+                    notificationId: state.uri.queryParameters['depuis_notification'],
+                  ),
                 ),
               ],
             ),

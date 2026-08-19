@@ -104,12 +104,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       validator: (v) {
                         final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
-                        if (digits.isEmpty)
+                        if (digits.isEmpty) {
                           return 'Saisissez votre numéro de téléphone.';
+                        }
                         // Le format exact est à confirmer avec A2 Connect (indicatif
                         // +222 accepté ou non). On reste large pour ne bloquer personne.
-                        if (digits.length < 8)
+                        if (digits.length < 8) {
                           return 'Ce numéro semble incomplet.';
+                        }
                         return null;
                       },
                     ),
@@ -193,8 +195,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// charges. En attendant l'arbitrage d'A2 Connect, on renvoie vers le
   /// service client plutôt que d'inventer une procédure.
   void _showHelp(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
+    showAppBottomSheet<void>(
+      context,
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,

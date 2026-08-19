@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/router/app_router.dart';
@@ -133,8 +134,8 @@ class BlockingScreen extends ConsumerWidget {
   /// La portée exacte du blocage, en clair. Ce texte est à faire valider par
   /// A2 Connect : c'est un engagement vis-à-vis de l'abonné.
   static void _showScope(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
+    showAppBottomSheet<void>(
+      context,
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
@@ -236,6 +237,43 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
+/// Couleur de marque officielle pour les plateformes connues du mock
+/// (écran 09). Repli neutre pour toute clé future non reconnue : le vrai
+/// backend pourra ajouter des plateformes sans que l'écran ne casse.
+Color _platformColor(String key) => switch (key) {
+      'tiktok' => Colors.black,
+      'facebook' => const Color(0xFF1877F2),
+      'instagram' => const Color(0xFFE1306C),
+      'snapchat' => const Color(0xFFFFC800),
+      'youtube' => const Color(0xFFFF0000),
+      'netflix' => const Color(0xFFE50914),
+      'roblox' => Colors.black,
+      'freefire' => const Color(0xFFFF6B00),
+      _ => AppColors.brand,
+    };
+
+/// Vrais logos de marque (SVG officiels, source Simple Icons — CC0, redessin
+/// libre de droits des marques déposées, usage standard pour ce genre
+/// d'écran « autoriser / bloquer telle app »). `assets/icons/platforms/`.
+///
+/// Free Fire n'a pas d'équivalent dans un jeu d'icônes libre de droits : pas
+/// de logo officiel disponible sans risque de licence, d'où l'icône
+/// générique en repli — un choix assumé, pas un oubli.
+const _svgLogos = {'tiktok', 'facebook', 'instagram', 'snapchat', 'youtube', 'netflix', 'roblox'};
+
+Widget _platformLogo(String key) {
+  if (_svgLogos.contains(key)) {
+    return SvgPicture.asset(
+      'assets/icons/platforms/$key.svg',
+      width: 24,
+      height: 24,
+      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+    );
+  }
+  final icon = key == 'freefire' ? Icons.local_fire_department : Icons.public;
+  return Icon(icon, size: 24, color: Colors.white);
+}
+
 class _PlatformTile extends ConsumerWidget {
   const _PlatformTile({required this.platform});
 
@@ -266,8 +304,8 @@ class _PlatformTile extends ConsumerWidget {
   }
 
   Future<bool?> _confirmBlock(BuildContext context) {
-    return showModalBottomSheet<bool>(
-      context: context,
+    return showAppBottomSheet<bool>(
+      context,
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
         return Padding(
@@ -352,11 +390,12 @@ class _PlatformTile extends ConsumerWidget {
           Container(
             width: 52,
             height: 52,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
+              color: _platformColor(platform.key),
               borderRadius: BorderRadius.circular(AppRadius.field),
             ),
-            child: const Icon(Icons.public, size: 24),
+            child: _platformLogo(platform.key),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

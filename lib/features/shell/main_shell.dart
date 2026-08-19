@@ -13,11 +13,19 @@ class MainShell extends StatelessWidget {
 
   final StatefulNavigationShell shell;
 
-  static const _items = <({IconData icon, String label})>[
-    (icon: Icons.home_outlined, label: 'Accueil'),
-    (icon: Icons.description_outlined, label: 'Factures'),
-    (icon: Icons.account_balance_wallet_outlined, label: 'Paiements'),
-    (icon: Icons.block, label: 'Blocage'),
+  static const _items = <({IconData icon, IconData iconSelected, String label})>[
+    (icon: Icons.home_outlined, iconSelected: Icons.home, label: 'Accueil'),
+    (
+      icon: Icons.description_outlined,
+      iconSelected: Icons.description,
+      label: 'Factures',
+    ),
+    (
+      icon: Icons.account_balance_wallet_outlined,
+      iconSelected: Icons.account_balance_wallet,
+      label: 'Paiements',
+    ),
+    (icon: Icons.block, iconSelected: Icons.block, label: 'Blocage'),
   ];
 
   void _onTap(int index) {
@@ -36,7 +44,7 @@ class MainShell extends StatelessWidget {
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.surfaceMuted,
+            color: AppColors.border,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Row(
@@ -44,7 +52,9 @@ class MainShell extends StatelessWidget {
             children: [
               for (var i = 0; i < _items.length; i++)
                 _NavItem(
-                  icon: _items[i].icon,
+                  icon: i == shell.currentIndex
+                      ? _items[i].iconSelected
+                      : _items[i].icon,
                   label: _items[i].label,
                   selected: i == shell.currentIndex,
                   onTap: () => _onTap(i),
@@ -96,7 +106,7 @@ class _NavItem extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                selected ? label.toUpperCase() : label,
+                label.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(

@@ -4,6 +4,61 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 
+/// Ouvre une feuille modale qui ne déborde jamais : `isScrollControlled`
+/// laisse le contenu prendre toute la hauteur qu'il lui faut plutôt que
+/// d'être limité à 9/16 de l'écran (c'est ce plafond par défaut qui causait
+/// le débordement sur l'écran « Comment fonctionne le blocage »), et le
+/// [SingleChildScrollView] absorbe le reste sur les petits écrans ou en
+/// accessibilité (texte agrandi). Point de passage unique pour toutes les
+/// feuilles de l'app.
+Future<T?> showAppBottomSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(child: builder(sheetContext)),
+    ),
+  );
+}
+
+/// Le canal de contact du service client n'est pas défini par le cahier des
+/// charges (numéro, WhatsApp, formulaire ?). En attendant, un pense-bête
+/// honnête plutôt qu'un bouton qui ne mène nulle part — réutilisé partout où
+/// les maquettes montrent l'icône casque (accueil, détail facture).
+void showSupportSheet(BuildContext context) {
+  showAppBottomSheet<void>(
+    context,
+    builder: (_) => const Padding(
+      padding: EdgeInsets.all(AppSpacing.lg),
+      child: InfoBanner(
+        text: 'Le canal de contact du service client reste à définir avec '
+            'A2 Connect (téléphone, WhatsApp, formulaire).',
+      ),
+    ),
+  );
+}
+
+/// Idem pour les préférences de notification (écran 12, bouton « Gérer les
+/// préférences » et icône réglages) : pas d'écran de réglages dans le
+/// périmètre actuel, on le dit plutôt que de faire semblant.
+void showNotificationPreferencesStub(BuildContext context) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Les préférences de notification restent à définir avec A2 Connect.',
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+}
+
 /// Libellé de section en capitales espacées : « STATUT DU RÉSEAU »,
 /// « DERNIÈRE FACTURE », « RÉSEAUX SOCIAUX ».
 class SectionLabel extends StatelessWidget {
@@ -107,11 +162,56 @@ class DetailRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          const Divider(),
+          const DividerAccent(),
         ],
       ),
     );
   }
+}
+
+/// Le petit accent « trait + tick diagonal », signature graphique des
+/// maquettes (sous le sous-titre de l'écran 02, en bout de chaque
+/// [DetailRow] de l'écran 06). Remplace un simple [Divider] nu.
+///
+/// Sans [width] : occupe toute la largeur disponible (usage dans une liste).
+/// Avec [width] : ligne courte et centrée (usage sous un titre).
+class DividerAccent extends StatelessWidget {
+  const DividerAccent({super.key, this.width});
+
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Row(
+      mainAxisSize: width == null ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        if (width == null)
+          const Expanded(child: Divider())
+        else
+          SizedBox(
+            width: width! - 18,
+            child: const Divider(),
+          ),
+        const SizedBox(width: 6),
+        CustomPaint(size: const Size(11, 11), painter: _TickPainter()),
+      ],
+    );
+    return width == null ? row : SizedBox(width: width, child: row);
+  }
+}
+
+class _TickPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.border
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(size.width * 0.15, 0), Offset(size.width, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Bandeau d'information neutre (avertissements, précisions).

@@ -18,9 +18,18 @@ import '../../data/providers/providers.dart';
 /// des charges n'avait pas prévu : le paiement est parti, l'opérateur n'a pas
 /// encore confirmé — l'écran le dit au lieu d'annoncer un succès.
 class PaymentDetailScreen extends ConsumerWidget {
-  const PaymentDetailScreen({super.key, required this.paymentId});
+  const PaymentDetailScreen({
+    super.key,
+    required this.paymentId,
+    this.notificationId,
+  });
 
   final String paymentId;
+
+  /// Présent quand l'écran est ouvert depuis une notification (paramètre
+  /// `depuis_notification` de l'URL) : affiche alors le lien « Supprimer la
+  /// notification » de l'écran 08.
+  final String? notificationId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,13 +42,20 @@ class PaymentDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => showNotificationPreferencesStub(context),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
       ),
       body: SafeArea(
         bottom: false,
         child: AsyncView(
           value: payment,
           onRetry: () => ref.invalidate(paymentProvider(paymentId)),
-          data: (p) => _Body(payment: p),
+          data: (p) => _Body(payment: p, notificationId: notificationId),
         ),
       ),
     );
@@ -47,15 +63,16 @@ class PaymentDetailScreen extends ConsumerWidget {
 }
 
 class _Body extends ConsumerWidget {
-  const _Body({required this.payment});
+  const _Body({required this.payment, this.notificationId});
 
   final Payment payment;
+  final String? notificationId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    final (icon, tint, headline, message) = switch (payment.status) {
+    final (icon, tint, headline, message, statusLabel) = switch (payment.status) {
       PaymentStatus.confirmed => (
           Icons.check,
           AppColors.success,
@@ -63,6 +80,7 @@ class _Body extends ConsumerWidget {
           'Votre paiement${_forInvoice()} a été traité avec succès. Votre '
               'connexion reste active et aucun frais supplémentaire n\'a été '
               'appliqué.',
+          'Succès',
         ),
       PaymentStatus.pending => (
           Icons.schedule,
@@ -71,6 +89,7 @@ class _Body extends ConsumerWidget {
           'Votre paiement${_forInvoice()} a bien été transmis à ${payment.method}. '
               'La confirmation peut prendre quelques minutes — vous recevrez une '
               'notification dès qu\'elle arrive.',
+          'En cours',
         ),
       PaymentStatus.refused => (
           Icons.close,
@@ -78,6 +97,7 @@ class _Body extends ConsumerWidget {
           'refusé',
           'Votre paiement${_forInvoice()} n\'a pas abouti. Aucun montant n\'a '
               'été débité. Vous pouvez réessayer avec un autre moyen de paiement.',
+          'Échec',
         ),
       PaymentStatus.unknown => (
           Icons.help_outline,
@@ -85,6 +105,7 @@ class _Body extends ConsumerWidget {
           'à vérifier',
           'Le statut de ce paiement n\'a pas pu être déterminé. Contactez le '
               'service client si le montant a été débité.',
+          'Inconnu',
         ),
     };
 
@@ -191,7 +212,7 @@ class _Body extends ConsumerWidget {
                           Icon(Icons.circle, size: 9, color: tint),
                           const SizedBox(width: 6),
                           Text(
-                            payment.status.label,
+                            statusLabel,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontSize: 16,
                               color: tint,
@@ -247,6 +268,23 @@ class _Body extends ConsumerWidget {
                 context.push(Routes.pay(invoiceId: payment.invoiceId)),
             icon: const Icon(Icons.replay, size: 19),
             label: const Text('Réessayer le paiement'),
+          ),
+        ],
+
+        if (notificationId != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: TextButton.icon(
+              onPressed: () async {
+                await ref
+                    .read(notificationsProvider.notifier)
+                    .delete(notificationId!);
+                if (context.mounted) context.pop();
+              },
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Supprimer la notification'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            ),
           ),
         ],
       ],

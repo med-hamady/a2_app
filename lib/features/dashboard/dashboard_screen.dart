@@ -112,24 +112,9 @@ class _Header extends ConsumerWidget {
         ),
         _IconBadge(
           icon: Icons.headset_mic_outlined,
-          onTap: () => _showSupport(context),
+          onTap: () => showSupportSheet(context),
         ),
       ],
-    );
-  }
-
-  /// Le canal de contact n'est pas défini par le cahier des charges (numéro,
-  /// WhatsApp, formulaire ?). En attendant, on affiche un pense-bête.
-  void _showSupport(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (_) => const Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
-        child: InfoBanner(
-          text: 'Le canal de contact du service client reste à définir avec '
-              'A2 Connect (téléphone, WhatsApp, formulaire).',
-        ),
-      ),
     );
   }
 }
@@ -216,7 +201,7 @@ class _SubscriptionCard extends ConsumerWidget {
                 const SizedBox(height: 6),
                 _KeyValueLine(
                   label: 'Prochain renouvellement',
-                  value: Fmt.dateLong(s.renewalDate),
+                  value: Fmt.dateLong(s.renewalDate, includeYear: false),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Row(
@@ -237,7 +222,10 @@ class _SubscriptionCard extends ConsumerWidget {
   }
 }
 
-/// La pastille blanche « 0 MRU (À jour) » / « 12 400 MRU dus ».
+/// La pastille blanche « 0 MRU (À jour) » / « 12 400 MRU (Dû) » — fidèle à
+/// l'écran 04 : une seule ligne dans une pastille blanche, montant et
+/// devise dans le même poids, seule la couleur porte l'état (sombre = à
+/// jour, rouge = solde dû).
 class _BalanceChip extends StatelessWidget {
   const _BalanceChip({required this.balance});
 
@@ -248,25 +236,30 @@ class _BalanceChip extends StatelessWidget {
     return balance.when(
       loading: () => const SkeletonBox(height: 52, width: 190),
       error: (_, __) => const SizedBox(height: 52),
-      data: (b) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        child: Text(
-          b.isUpToDate
-              ? '${Fmt.money(0)} (À jour)'
-              : '${Fmt.money(b.amountDue)} dus',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontSize: 21,
-                fontWeight: FontWeight.w600,
-                color: b.isUpToDate ? AppColors.textPrimary : AppColors.danger,
-              ),
-        ),
-      ),
+      data: (b) {
+        final color = b.isUpToDate ? AppColors.textPrimary : AppColors.danger;
+        final label = b.isUpToDate
+            ? '${Fmt.money(0)} (À jour)'
+            : '${Fmt.money(b.amountDue)} (Dû)';
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                  color: color,
+                ),
+          ),
+        );
+      },
     );
   }
 }

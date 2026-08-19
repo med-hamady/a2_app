@@ -25,9 +25,13 @@ abstract final class Fmt {
       d == null ? '—' : DateFormat('dd/MM/yyyy').format(d);
 
   /// « 15 Mars 2026 » — format long de l'historique des paiements.
-  static String dateLong(DateTime? d) {
+  ///
+  /// [includeYear] à `false` donne « 28 Octobre » (écran 04, date de
+  /// renouvellement — l'année n'y est jamais affichée).
+  static String dateLong(DateTime? d, {bool includeYear = true}) {
     if (d == null) return '—';
-    final s = DateFormat('d MMMM yyyy', 'fr_FR').format(d);
+    final pattern = includeYear ? 'd MMMM yyyy' : 'd MMMM';
+    final s = DateFormat(pattern, 'fr_FR').format(d);
     // Les maquettes capitalisent le mois (« 15 Mars 2026 »), pas la locale fr.
     return s.replaceFirstMapped(
       RegExp(r'\d+\s(\p{L})', unicode: true),

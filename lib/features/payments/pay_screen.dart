@@ -118,9 +118,8 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             ?.label ??
         methodCode;
 
-    return showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
+    return showAppBottomSheet<bool>(
+      context,
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
         return Padding(

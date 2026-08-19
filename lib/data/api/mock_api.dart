@@ -226,6 +226,8 @@ class MockA2Api implements A2Api {
         body: 'Votre paiement de ${Fmt.money(amount)} a été traité avec succès.',
         date: DateTime.now(),
         read: false,
+        relatedType: 'payment',
+        relatedId: payment.id,
       ),
     );
 
@@ -431,6 +433,8 @@ class MockA2Api implements A2Api {
         body: 'Votre paiement pour la facture #FA-2026-089 a été traité avec succès.',
         date: now.subtract(const Duration(hours: 2)),
         read: false,
+        relatedType: 'payment',
+        relatedId: 'p-99283',
       ),
       AppNotification(
         id: 'n-2',
@@ -439,6 +443,8 @@ class MockA2Api implements A2Api {
         body: 'Votre facture est maintenant disponible dans votre espace client.',
         date: DateTime(now.year, now.month, now.day, 8, 30),
         read: false,
+        relatedType: 'invoice',
+        relatedId: 'inv-876543',
       ),
       AppNotification(
         id: 'n-3',
@@ -472,6 +478,8 @@ class MockA2Api implements A2Api {
         body: 'Le prélèvement pour votre abonnement n\'a pas pu être effectué.',
         date: now.subtract(const Duration(days: 9)),
         read: true,
+        relatedType: 'payment',
+        relatedId: 'p-98990',
       ),
     ];
   }

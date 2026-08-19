@@ -279,6 +279,8 @@ class AppNotification {
     required this.body,
     required this.date,
     required this.read,
+    this.relatedType,
+    this.relatedId,
   });
 
   final String id;
@@ -288,6 +290,11 @@ class AppNotification {
   final DateTime? date;
   final bool read;
 
+  /// « payment » ou « invoice » — vers quoi taper la notification navigue.
+  /// `null` pour les notifications purement informatives (maintenance, CGU).
+  final String? relatedType;
+  final String? relatedId;
+
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
       AppNotification(
         id: json['id']?.toString() ?? '',
@@ -296,6 +303,8 @@ class AppNotification {
         body: json['body'] as String? ?? '',
         date: _toDate(json['date']),
         read: json['read'] as bool? ?? false,
+        relatedType: json['related_type'] as String?,
+        relatedId: json['related_id']?.toString(),
       );
 
   AppNotification copyWith({bool? read}) => AppNotification(
@@ -305,5 +314,7 @@ class AppNotification {
         body: body,
         date: date,
         read: read ?? this.read,
+        relatedType: relatedType,
+        relatedId: relatedId,
       );
 }

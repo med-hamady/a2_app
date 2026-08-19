@@ -36,6 +36,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
             icon: const Icon(Icons.notifications_none),
             onPressed: () => context.push(Routes.notifications),
           ),
+          IconButton(
+            icon: const Icon(Icons.headset_mic_outlined),
+            onPressed: () => showSupportSheet(context),
+          ),
           const SizedBox(width: AppSpacing.sm),
         ],
       ),
@@ -126,13 +130,17 @@ class _Body extends ConsumerWidget {
             child: Text('RÉGLER ${Fmt.money(invoice.amount)}'),
           ),
           const SizedBox(height: AppSpacing.sm + 4),
-        ],
-
-        OutlinedButton.icon(
-          onPressed: () => _download(context),
-          icon: const Icon(Icons.download, size: 20),
-          label: const Text('Télécharger la facture'),
-        ),
+          OutlinedButton.icon(
+            onPressed: () => _download(context),
+            icon: const Icon(Icons.download, size: 20),
+            label: const Text('Télécharger la facture'),
+          ),
+        ] else
+          ElevatedButton.icon(
+            onPressed: () => _download(context),
+            icon: const Icon(Icons.download, size: 20),
+            label: const Text('Télécharger la facture'),
+          ),
       ],
     );
   }

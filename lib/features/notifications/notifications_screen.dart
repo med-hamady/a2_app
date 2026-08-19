@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/format/formatters.dart';
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/async_view.dart';
@@ -23,6 +24,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifications = ref.watch(notificationsProvider);
     final unread = ref.watch(unreadCountProvider);
+    final isEmpty = notifications.value?.isEmpty ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -32,13 +34,20 @@ class NotificationsScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         actions: [
-          IconButton(
-            tooltip: 'Tout marquer comme lu',
-            icon: const Icon(Icons.done_all),
-            onPressed: unread == 0
-                ? null
-                : () => ref.read(notificationsProvider.notifier).markAllRead(),
-          ),
+          if (isEmpty)
+            IconButton(
+              tooltip: 'Préférences',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => showNotificationPreferencesStub(context),
+            )
+          else
+            IconButton(
+              tooltip: 'Tout marquer comme lu',
+              icon: const Icon(Icons.done_all),
+              onPressed: unread == 0
+                  ? null
+                  : () => ref.read(notificationsProvider.notifier).markAllRead(),
+            ),
           const SizedBox(width: AppSpacing.sm),
         ],
       ),
@@ -128,6 +137,24 @@ class _NotificationTile extends ConsumerWidget {
 
   final AppNotification notification;
 
+  /// Marque la notification lue, puis navigue vers l'élément lié s'il y en a
+  /// un (paiement ou facture). Les notifications purement informatives
+  /// (maintenance, CGU…) n'ont rien vers quoi naviguer : le tap se contente
+  /// de les marquer lues, comme avant.
+  void _open(BuildContext context, WidgetRef ref) {
+    final n = notification;
+    if (!n.read) ref.read(notificationsProvider.notifier).markRead(n.id);
+
+    switch ((n.relatedType, n.relatedId)) {
+      case ('payment', final id?):
+        context.push(Routes.payment(id, fromNotification: n.id));
+      case ('invoice', final id?):
+        context.push(Routes.invoice(id));
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -186,9 +213,7 @@ class _NotificationTile extends ConsumerWidget {
           borderRadius: BorderRadius.circular(AppRadius.card),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.card),
-            onTap: n.read
-                ? null
-                : () => ref.read(notificationsProvider.notifier).markRead(n.id),
+            onTap: () => _open(context, ref),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
@@ -276,20 +301,24 @@ class _EmptyState extends StatelessWidget {
           action: SizedBox(
             width: 260,
             child: ElevatedButton(
-              onPressed: () => ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Les préférences de notification restent à définir avec '
-                      'A2 Connect.',
-                    ),
-                    backgroundColor: AppColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                ),
-              child: const Text('Gérer les préférences'),
+              onPressed: () => showNotificationPreferencesStub(context),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Gérer les préférences'),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward, size: 18),
+                ],
+              ),
             ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.screen),
+          child: InfoBanner(
+            icon: Icons.lightbulb_outline,
+            text: 'Saviez-vous que vous pouvez filtrer vos alertes par type '
+                'de paiement dans les réglages ?',
           ),
         ),
       ],

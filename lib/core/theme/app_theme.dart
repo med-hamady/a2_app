@@ -112,13 +112,15 @@ abstract final class AppTheme {
           fontSize: 16,
           color: AppColors.textSecondary,
         ),
+        // Pas de bordure visible au repos (cf. écran 03) : seul le focus la
+        // révèle, en couleur de marque.
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.field),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: Colors.transparent),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.field),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: Colors.transparent),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.field),
