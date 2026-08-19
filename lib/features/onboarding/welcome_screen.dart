@@ -21,7 +21,7 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(flex: 3),
-              const A2Logo(height: 54),
+              const A2Logo(height: 72),
               const SizedBox(height: AppSpacing.xl + AppSpacing.md),
               Text(
                 'Votre espace client\nA2Connect',

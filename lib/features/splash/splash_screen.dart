@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: child,
             ),
           ),
-          child: const A2Logo(height: 78),
+          child: const A2Logo(height: 130),
         ),
       ),
     );
