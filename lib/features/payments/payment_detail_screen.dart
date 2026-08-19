@@ -77,7 +77,7 @@ class _Body extends ConsumerWidget {
           Icons.check,
           AppColors.success,
           'confirmé',
-          'Votre paiement${_forInvoice()} a été traité avec succès. Votre '
+          'Votre paiement${_forInvoice()} a été vérifié et confirmé. Votre '
               'connexion reste active et aucun frais supplémentaire n\'a été '
               'appliqué.',
           'Succès',
@@ -85,18 +85,19 @@ class _Body extends ConsumerWidget {
       PaymentStatus.pending => (
           Icons.schedule,
           AppColors.warning,
-          'en cours de traitement',
-          'Votre paiement${_forInvoice()} a bien été transmis à ${payment.method}. '
-              'La confirmation peut prendre quelques minutes — vous recevrez une '
-              'notification dès qu\'elle arrive.',
+          'en cours de vérification',
+          'Votre justificatif${_forInvoice()} a bien été transmis à A2 Connect. '
+              'La vérification par ${payment.method} peut prendre quelques '
+              'minutes — vous recevrez une notification dès qu\'elle arrive.',
           'En cours',
         ),
       PaymentStatus.refused => (
           Icons.close,
           AppColors.danger,
           'refusé',
-          'Votre paiement${_forInvoice()} n\'a pas abouti. Aucun montant n\'a '
-              'été débité. Vous pouvez réessayer avec un autre moyen de paiement.',
+          'Le justificatif transmis${_forInvoice()} n\'a pas pu être validé. '
+              'Vérifiez le montant et la capture d\'écran, puis envoyez un '
+              'nouveau justificatif.',
           'Échec',
         ),
       PaymentStatus.unknown => (
@@ -267,7 +268,7 @@ class _Body extends ConsumerWidget {
             onPressed: () =>
                 context.push(Routes.pay(invoiceId: payment.invoiceId)),
             icon: const Icon(Icons.replay, size: 19),
-            label: const Text('Réessayer le paiement'),
+            label: const Text('Envoyer un nouveau justificatif'),
           ),
         ],
 

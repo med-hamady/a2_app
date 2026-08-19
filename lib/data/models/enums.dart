@@ -106,6 +106,7 @@ enum BlockState {
 
 enum NotificationKind {
   paymentSuccess,
+  paymentPending,
   paymentFailed,
   newInvoice,
   maintenance,
@@ -114,6 +115,7 @@ enum NotificationKind {
 
   static NotificationKind fromApi(String? value) => switch (value) {
         'payment_success' => NotificationKind.paymentSuccess,
+        'payment_pending' => NotificationKind.paymentPending,
         'payment_failed' => NotificationKind.paymentFailed,
         'new_invoice' => NotificationKind.newInvoice,
         'maintenance' => NotificationKind.maintenance,

@@ -165,6 +165,11 @@ class _NotificationTile extends ConsumerWidget {
           AppColors.primary,
           AppColors.surfaceMuted,
         ),
+      NotificationKind.paymentPending => (
+          Icons.hourglass_top,
+          AppColors.warning,
+          AppColors.warningBg,
+        ),
       NotificationKind.paymentFailed => (
           Icons.error_outline,
           AppColors.danger,

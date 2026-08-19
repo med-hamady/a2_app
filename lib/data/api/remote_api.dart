@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../core/config.dart';
@@ -18,6 +20,9 @@ import 'api_exception.dart';
 ///  3. le nom des champs JSON, dans `fromJson` des modèles — un seul fichier ;
 ///  4. la forme des listes : tableau nu, ou objet `{ "data": [...] }` ?
 ///     (géré par [_asList] ci-dessous.)
+///  5. le nom du champ multipart du justificatif de paiement (`receipt` dans
+///     [createPayment]) et le format attendu par le webhook du système de
+///     paiement existant.
 ///
 /// Aucun écran n'a à être modifié pour ce branchement.
 class RemoteA2Api implements A2Api {
@@ -241,15 +246,21 @@ class RemoteA2Api implements A2Api {
     required double amount,
     required String methodCode,
     required String idempotencyKey,
+    required Uint8List receiptImage,
+    required String receiptFileName,
     String? invoiceId,
   }) async {
+    // Envoi multipart : le justificatif (capture d'écran de la confirmation
+    // de l'opérateur) voyage avec la demande, pas d'appel séparé.
+    final body = FormData.fromMap({
+      'amount': amount,
+      'method': methodCode,
+      if (invoiceId != null) 'invoice_id': invoiceId,
+      'receipt': MultipartFile.fromBytes(receiptImage, filename: receiptFileName),
+    });
     final json = await _post(
       _Paths.payments,
-      body: {
-        'amount': amount,
-        'method': methodCode,
-        if (invoiceId != null) 'invoice_id': invoiceId,
-      },
+      body: body,
       options: Options(
         // La clé voyage aussi en en-tête : c'est la convention la plus
         // répandue côté passerelles de paiement. À confirmer avec A2 Connect.

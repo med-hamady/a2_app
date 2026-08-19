@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/format/formatters.dart';
 import '../../core/router/app_router.dart';
@@ -17,17 +19,26 @@ import '../../data/providers/providers.dart';
 
 /// Écran de règlement (§4.5 du cahier des charges).
 ///
-/// **Il n'existe pas dans les maquettes** : le parcours de paiement n'a pas été
-/// dessiné. Ce qui suit est une proposition construite avec la même charte, et
-/// avec les garde-fous que tout paiement réel impose :
+/// **Le règlement se fait hors de l'application** : le client paie
+/// directement auprès de son opérateur de mobile money (Bankily, Masrivi,
+/// Sedad…), puis transmet ici la capture d'écran de la confirmation. C'est
+/// le système de paiement déjà en place côté A2 Connect — via son webhook —
+/// qui vérifie et confirme le paiement, pas cet écran. L'app ne débite donc
+/// jamais rien elle-même ; son rôle se limite à collecter le justificatif.
+///
+/// **Il n'existe pas dans les maquettes** : le parcours n'a pas été dessiné.
+/// Ce qui suit est construit avec la même charte, et avec les garde-fous
+/// qu'impose ce genre de soumission :
 ///
 ///  - une **clé d'idempotence** générée une seule fois à l'ouverture de
-///    l'écran, envoyée à chaque tentative → deux appuis ne font qu'un débit ;
+///    l'écran, envoyée à chaque tentative → deux appuis n'envoient qu'un
+///    justificatif ;
 ///  - un **récapitulatif** validé avant l'appel, comme demandé par le cahier ;
-///  - la prise en charge d'une réponse **« en attente »**, l'opérateur de
-///    mobile money ne confirmant pas toujours dans la seconde.
+///  - un statut **« en attente »** par défaut : la confirmation vient du
+///    webhook du système de paiement, jamais de cette soumission.
 ///
-/// À revoir avec A2 Connect une fois le canal de paiement arrêté.
+/// À revoir avec A2 Connect une fois le numéro marchand et le format de
+/// justificatif attendus par le webhook arrêtés.
 class PayScreen extends ConsumerStatefulWidget {
   const PayScreen({super.key, this.invoiceId});
 
@@ -47,8 +58,18 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 
   final _amountController = TextEditingController();
   String? _methodCode;
+  XFile? _receipt;
   bool _submitting = false;
   Object? _error;
+
+  Future<void> _pickReceipt() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2000,
+      imageQuality: 85,
+    );
+    if (file != null) setState(() => _receipt = file);
+  }
 
   static String _newKey() {
     final random = Random.secure();
@@ -63,6 +84,9 @@ class _PayScreenState extends ConsumerState<PayScreen> {
     super.dispose();
   }
 
+  String _methodLabel({required List<PaymentMethod>? list, required String code}) =>
+      (list ?? const []).where((m) => m.code == code).firstOrNull?.label ?? code;
+
   double? get _typedAmount {
     final raw = _amountController.text.replaceAll(RegExp(r'[^0-9.,]'), '')
         .replaceAll(',', '.');
@@ -72,7 +96,8 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 
   Future<void> _confirm(double amount, Invoice? invoice) async {
     final method = _methodCode;
-    if (method == null) return;
+    final receipt = _receipt;
+    if (method == null || receipt == null) return;
 
     final ok = await _showRecap(amount, method, invoice);
     if (ok != true || !mounted) return;
@@ -83,16 +108,20 @@ class _PayScreenState extends ConsumerState<PayScreen> {
     });
 
     try {
+      final receiptBytes = await receipt.readAsBytes();
       final payment = await ref.read(apiProvider).createPayment(
             amount: amount,
             methodCode: method,
             idempotencyKey: _idempotencyKey,
+            receiptImage: receiptBytes,
+            receiptFileName: receipt.name,
             invoiceId: invoice?.id,
           );
 
-      // Le paiement a bougé le solde et la liste des factures : on les
-      // recharge avant de montrer le résultat, sinon l'abonné revient sur un
-      // accueil qui affiche encore l'ancien montant.
+      // Le justificatif ne confirme rien par lui-même — c'est le webhook du
+      // système de paiement qui le fera — mais on recharge quand même les
+      // listes : le nouveau paiement « en attente » doit apparaître tout de
+      // suite dans l'historique.
       ref.invalidate(paymentsProvider);
       ref.invalidate(invoicesProvider);
       ref.invalidate(balanceProvider);
@@ -112,11 +141,10 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 
   /// Le récapitulatif exigé par le §4.5 avant confirmation.
   Future<bool?> _showRecap(double amount, String methodCode, Invoice? invoice) {
-    final methodLabel = (ref.read(paymentMethodsProvider).value ?? const [])
-            .where((m) => m.code == methodCode)
-            .firstOrNull
-            ?.label ??
-        methodCode;
+    final methodLabel = _methodLabel(
+      list: ref.read(paymentMethodsProvider).value,
+      code: methodCode,
+    );
 
     return showAppBottomSheet<bool>(
       context,
@@ -144,21 +172,22 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text('Confirmer le paiement', style: theme.textTheme.headlineSmall),
+              Text('Envoyer le justificatif ?', style: theme.textTheme.headlineSmall),
               const SizedBox(height: AppSpacing.lg),
-              _RecapLine(label: 'Montant', value: Fmt.money(amount), strong: true),
+              _RecapLine(label: 'Montant réglé', value: Fmt.money(amount), strong: true),
               if (invoice != null)
                 _RecapLine(label: 'Facture', value: invoice.reference),
               _RecapLine(label: 'Moyen de paiement', value: methodLabel),
               const SizedBox(height: AppSpacing.lg),
               const InfoBanner(
-                text: 'La confirmation peut demander une validation sur votre '
-                    'téléphone. Ne fermez pas l\'application avant le résultat.',
+                text: 'Nous transmettons votre justificatif au système de '
+                    'paiement A2 Connect pour vérification. Vous serez notifié '
+                    'dès que le paiement sera confirmé.',
               ),
               const SizedBox(height: AppSpacing.lg),
               ElevatedButton(
                 onPressed: () => Navigator.of(sheetContext).pop(true),
-                child: const Text('CONFIRMER'),
+                child: const Text('ENVOYER'),
               ),
               const SizedBox(height: AppSpacing.sm),
               OutlinedButton(
@@ -183,7 +212,8 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 
     // Facture réglée : le montant est imposé. Paiement libre : il est saisi.
     final amount = invoice?.amount ?? _typedAmount;
-    final canSubmit = !_submitting && amount != null && _methodCode != null;
+    final canSubmit =
+        !_submitting && amount != null && _methodCode != null && _receipt != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -261,7 +291,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 ],
 
                 const SizedBox(height: AppSpacing.xl),
-                const SectionLabel('Moyen de paiement'),
+                const SectionLabel('Moyen de paiement utilisé'),
                 const SizedBox(height: AppSpacing.sm + 4),
 
                 AsyncView(
@@ -281,6 +311,28 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                       ],
                     ],
                   ),
+                ),
+
+                if (_methodCode != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  InfoBanner(
+                    icon: Icons.info_outline,
+                    text: 'Envoyez le montant depuis l\'application '
+                        '${_methodLabel(list: methods.value, code: _methodCode!)}, '
+                        'puis ajoutez ci-dessous la capture d\'écran de la '
+                        'confirmation. Le numéro marchand A2 Connect reste à '
+                        'confirmer.',
+                  ),
+                ],
+
+                const SizedBox(height: AppSpacing.xl),
+                const SectionLabel('Justificatif de paiement'),
+                const SizedBox(height: AppSpacing.sm + 4),
+                _ReceiptPicker(
+                  receipt: _receipt,
+                  enabled: !_submitting,
+                  onPick: _pickReceipt,
+                  onRemove: () => setState(() => _receipt = null),
                 ),
 
                 if (_error != null) ...[
@@ -306,11 +358,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(
-                        amount == null
-                            ? 'PAYER'
-                            : 'PAYER ${Fmt.money(amount)}',
-                      ),
+                    : const Text('ENVOYER LE JUSTIFICATIF'),
               ),
             ),
           ],
@@ -377,6 +425,109 @@ class _MethodTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// La preuve du paiement fait hors de l'application : une capture d'écran de
+/// la confirmation de l'opérateur, seule pièce dont A2 Connect dispose tant
+/// que le webhook du système de paiement n'a pas confirmé.
+class _ReceiptPicker extends StatelessWidget {
+  const _ReceiptPicker({
+    required this.receipt,
+    required this.enabled,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  final XFile? receipt;
+  final bool enabled;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final file = receipt;
+
+    if (file == null) {
+      return AppCard(
+        onTap: enabled ? onPick : null,
+        color: AppColors.surfaceMuted,
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.xl,
+          horizontal: AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.add_photo_alternate_outlined,
+              size: 32,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            Text(
+              'Ajouter une capture d\'écran',
+              style: theme.textTheme.titleMedium?.copyWith(fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'La confirmation reçue de votre opérateur (JPG, PNG).',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AppCard.highlighted(
+      padding: const EdgeInsets.all(AppSpacing.sm + 4),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.field),
+            child: Image.file(
+              File(file.path),
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Justificatif ajouté',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  file.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 13.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: enabled ? onRemove : null,
+            tooltip: 'Retirer',
+          ),
+        ],
       ),
     );
   }

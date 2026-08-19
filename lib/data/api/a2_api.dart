@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/models.dart';
 
 /// Le contrat que l'application attend du backend — et rien d'autre.
@@ -59,18 +61,28 @@ abstract interface class A2Api {
   /// imposer une mise à jour de l'app sur les stores.
   Future<List<PaymentMethod>> fetchPaymentMethods();
 
-  /// Déclenche un paiement.
+  /// Soumet un paiement effectué **hors de l'application**.
+  ///
+  /// Le client règle directement auprès de son opérateur de mobile money
+  /// (Bankily, Masrivi, Sedad…) puis transmet ici la preuve du paiement :
+  /// l'app ne débite jamais rien elle-même. [receiptImage] est le
+  /// justificatif (capture d'écran de la confirmation de l'opérateur) —
+  /// obligatoire, c'est la seule preuve dont A2 Connect dispose tant que le
+  /// webhook du système de paiement n'a pas confirmé.
   ///
   /// [idempotencyKey] est généré par l'app AVANT l'appel et rejoué à
-  /// l'identique en cas de reprise : c'est ce qui empêche un double débit
-  /// quand le client tape deux fois ou perd le réseau après avoir confirmé.
+  /// l'identique en cas de reprise : ça évite qu'une même preuve crée deux
+  /// paiements si le client tape deux fois ou perd le réseau après l'envoi.
   ///
-  /// La réponse peut être `PaymentStatus.pending` : le paiement n'est alors
-  /// pas terminé, il faut suivre son évolution avec [fetchPayment].
+  /// La réponse est presque toujours `PaymentStatus.pending` : la
+  /// confirmation vient du webhook du système de paiement existant, pas de
+  /// cet appel. Il faut suivre son évolution avec [fetchPayment].
   Future<Payment> createPayment({
     required double amount,
     required String methodCode,
     required String idempotencyKey,
+    required Uint8List receiptImage,
+    required String receiptFileName,
     String? invoiceId,
   });
 

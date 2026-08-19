@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../core/format/formatters.dart';
 import '../../core/theme/app_dimens.dart';
 import '../models/models.dart';
@@ -169,10 +171,14 @@ class MockA2Api implements A2Api {
     required double amount,
     required String methodCode,
     required String idempotencyKey,
+    required Uint8List receiptImage,
+    required String receiptFileName,
     String? invoiceId,
   }) async {
     _requireSession();
-    await Future.delayed(const Duration(milliseconds: 1400));
+    // Le vrai transfert se fait hors de l'app ; ce délai simule seulement
+    // l'envoi du justificatif au serveur, pas un débit.
+    await Future.delayed(const Duration(milliseconds: 1200));
 
     final existing = _byIdempotencyKey[idempotencyKey];
     if (existing != null) return existing;
@@ -184,14 +190,16 @@ class MockA2Api implements A2Api {
             ?.label ??
         methodCode;
 
-    // Le mock confirme immédiatement. Le jour où l'API réelle répondra
-    // « en attente », l'écran de suivi est déjà prévu pour ce cas.
+    // Le statut reste « en attente » : seul le webhook du système de
+    // paiement existant confirme un paiement, jamais cet appel. La facture
+    // ne bascule donc pas en « payée » ici — elle le fera au retour du
+    // webhook, quand `fetchInvoices` sera rechargé.
     final payment = Payment(
       id: 'p-${DateTime.now().millisecondsSinceEpoch}',
       reference: 'PAY-${99300 + _payments.length}',
       date: DateTime.now(),
       amount: amount,
-      status: PaymentStatus.confirmed,
+      status: PaymentStatus.pending,
       method: method,
       invoiceId: invoiceId,
       invoicePeriodLabel: invoice?.periodLabel,
@@ -200,30 +208,14 @@ class MockA2Api implements A2Api {
     _byIdempotencyKey[idempotencyKey] = payment;
     _payments.insert(0, payment);
 
-    // La facture réglée bascule en « payée » : c'est ce qui fait bouger le
-    // solde de l'accueil au retour de l'écran de paiement.
-    if (invoice != null) {
-      final index = _invoices.indexOf(invoice);
-      _invoices[index] = Invoice(
-        id: invoice.id,
-        reference: invoice.reference,
-        periodLabel: invoice.periodLabel,
-        issueDate: invoice.issueDate,
-        dueDate: invoice.dueDate,
-        amount: invoice.amount,
-        status: InvoiceStatus.paid,
-        paidAt: DateTime.now(),
-        pdfUrl: invoice.pdfUrl,
-      );
-    }
-
     _notifications.insert(
       0,
       AppNotification(
         id: 'n-${DateTime.now().millisecondsSinceEpoch}',
-        kind: NotificationKind.paymentSuccess,
-        title: 'Paiement validé',
-        body: 'Votre paiement de ${Fmt.money(amount)} a été traité avec succès.',
+        kind: NotificationKind.paymentPending,
+        title: 'Justificatif reçu',
+        body: 'Votre justificatif pour un paiement de ${Fmt.money(amount)} a '
+            'été transmis et est en cours de vérification.',
         date: DateTime.now(),
         read: false,
         relatedType: 'payment',

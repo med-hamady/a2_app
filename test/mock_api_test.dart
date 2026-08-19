@@ -1,9 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:a2connect/data/api/a2_api.dart';
 import 'package:a2connect/data/api/api_exception.dart';
 import 'package:a2connect/data/api/mock_api.dart';
 import 'package:a2connect/data/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+
+/// Un justificatif factice : peu importe son contenu pour ces tests, seul
+/// compte qu'il soit fourni — l'API l'exige désormais toujours.
+final _fakeReceipt = Uint8List.fromList([0xff, 0xd8, 0xff]);
 
 /// Tests de la couche de données factice.
 ///
@@ -75,31 +81,43 @@ void main() {
         amount: 2500,
         methodCode: 'bankily',
         idempotencyKey: 'cle-unique',
+        receiptImage: _fakeReceipt,
+        receiptFileName: 'recu.jpg',
       );
       final second = await api.createPayment(
         amount: 2500,
         methodCode: 'bankily',
         idempotencyKey: 'cle-unique',
+        receiptImage: _fakeReceipt,
+        receiptFileName: 'recu.jpg',
       );
 
       expect(second.id, first.id);
       expect((await api.fetchPayments()).length, before + 1);
     });
 
-    test('régler une facture la fait passer en « payée »', () async {
+    test(
+        'soumettre un justificatif crée un paiement « en attente » sans '
+        'modifier la facture', () async {
       await connect();
       final target = (await api.fetchInvoices())
           .firstWhere((i) => i.status == InvoiceStatus.overdue);
 
-      await api.createPayment(
+      // Le règlement se fait hors de l'app : seul le webhook du système de
+      // paiement confirme, jamais cette soumission.
+      final payment = await api.createPayment(
         amount: target.amount,
         methodCode: 'bankily',
         idempotencyKey: 'cle-facture',
+        receiptImage: _fakeReceipt,
+        receiptFileName: 'recu.jpg',
         invoiceId: target.id,
       );
 
+      expect(payment.status, PaymentStatus.pending);
+
       final after = await api.fetchInvoice(target.id);
-      expect(after.status, InvoiceStatus.paid);
+      expect(after.status, InvoiceStatus.overdue);
     });
   });
 
