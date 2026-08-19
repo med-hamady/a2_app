@@ -68,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: A2Logo(height: 66)),
+                    const Center(child: A2Logo(height: 102)),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
                       'Connexion',
@@ -132,6 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     Text(
                       'Votre identifiant client figure sur vos factures A2Connect.',
+                      textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
