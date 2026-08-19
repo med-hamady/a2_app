@@ -36,10 +36,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(sessionProvider.notifier).login(
-          phone: _phone.text.trim(),
-          clientId: _clientId.text.trim(),
-        );
+    await ref
+        .read(sessionProvider.notifier)
+        .login(phone: _phone.text.trim(), clientId: _clientId.text.trim());
     // En cas de succès, c'est le routeur qui redirige vers l'accueil : cet
     // écran n'a pas à connaître la suite du parcours.
   }
@@ -54,118 +53,135 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screen,
-              vertical: AppSpacing.xl,
-            ),
-            children: [
-              const SizedBox(height: AppSpacing.xl),
-              const Center(child: A2Logo(height: 66)),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'Connexion',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                ),
+          // Centré comme sur la maquette (écran 03) tant que le contenu
+          // tient dans la hauteur disponible ; devient défilable dès que le
+          // clavier ou un message d'erreur reprend de la place.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screen,
+                vertical: AppSpacing.xl,
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Connectez-vous pour gérer votre abonnement A2Connect.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 16,
-                  height: 1.5,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-
-              TextFormField(
-                controller: _phone,
-                enabled: !busy,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.telephoneNumber],
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]')),
-                ],
-                decoration: const InputDecoration(hintText: 'Numéro de téléphone'),
-                validator: (v) {
-                  final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
-                  if (digits.isEmpty) return 'Saisissez votre numéro de téléphone.';
-                  // Le format exact est à confirmer avec A2 Connect (indicatif
-                  // +222 accepté ou non). On reste large pour ne bloquer personne.
-                  if (digits.length < 8) return 'Ce numéro semble incomplet.';
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.md - 4),
-
-              TextFormField(
-                controller: _clientId,
-                enabled: !busy,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => busy ? null : _submit(),
-                decoration: const InputDecoration(hintText: 'Identifiant client'),
-                validator: (v) => (v ?? '').trim().isEmpty
-                    ? 'Saisissez votre identifiant client.'
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.sm + 4),
-
-              Text(
-                'Votre identifiant client figure sur vos factures A2Connect.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-
-              if (session.hasError) ...[
-                const SizedBox(height: AppSpacing.md),
-                ErrorView(error: session.error!, compact: true),
-              ],
-
-              const SizedBox(height: AppSpacing.lg),
-              ElevatedButton(
-                onPressed: busy ? null : _submit,
-                child: busy
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('SE CONNECTER'),
-                          SizedBox(width: AppSpacing.sm + 4),
-                          Icon(Icons.arrow_forward, size: 20),
-                        ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(child: A2Logo(height: 66)),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Connexion',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
                       ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Connectez-vous pour gérer votre abonnement A2Connect.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
 
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: busy ? null : () => _showHelp(context),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    textStyle: theme.textTheme.labelLarge,
-                  ),
-                  child: const Text("Besoin d'aide ?"),
+                    TextFormField(
+                      controller: _phone,
+                      enabled: !busy,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.telephoneNumber],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]')),
+                      ],
+                      decoration: const InputDecoration(
+                        hintText: 'Numéro de téléphone',
+                      ),
+                      validator: (v) {
+                        final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        if (digits.isEmpty)
+                          return 'Saisissez votre numéro de téléphone.';
+                        // Le format exact est à confirmer avec A2 Connect (indicatif
+                        // +222 accepté ou non). On reste large pour ne bloquer personne.
+                        if (digits.length < 8)
+                          return 'Ce numéro semble incomplet.';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md - 4),
+
+                    TextFormField(
+                      controller: _clientId,
+                      enabled: !busy,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => busy ? null : _submit(),
+                      decoration: const InputDecoration(
+                        hintText: 'Identifiant client',
+                      ),
+                      validator: (v) => (v ?? '').trim().isEmpty
+                          ? 'Saisissez votre identifiant client.'
+                          : null,
+                    ),
+                    const SizedBox(height: AppSpacing.sm + 4),
+
+                    Text(
+                      'Votre identifiant client figure sur vos factures A2Connect.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+
+                    if (session.hasError) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      ErrorView(error: session.error!, compact: true),
+                    ],
+
+                    const SizedBox(height: AppSpacing.lg),
+                    ElevatedButton(
+                      onPressed: busy ? null : _submit,
+                      child: busy
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('SE CONNECTER'),
+                                SizedBox(width: AppSpacing.sm + 4),
+                                Icon(Icons.arrow_forward, size: 20),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: busy ? null : () => _showHelp(context),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          textStyle: theme.textTheme.labelLarge,
+                        ),
+                        child: const Text("Besoin d'aide ?"),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -195,7 +211,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             const InfoBanner(
-              text: 'Votre identifiant client figure en haut de chacune de vos '
+              text:
+                  'Votre identifiant client figure en haut de chacune de vos '
                   'factures. Si vous ne le retrouvez pas, contactez le service '
                   'client A2 Connect.',
             ),
